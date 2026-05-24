@@ -16,7 +16,15 @@ export default function ProgressNav({ laptopChecked, flowDone, selectedSession, 
   const refsList = [refs.req, refs.prep, refs.schedule, refs.readiness, refs.register]
 
   return (
-    <div className="fixed right-5 top-1/2 -translate-y-1/2 z-50 hidden md:block select-none">
+    <div className="fixed right-5 top-1/2 -translate-y-1/2 z-50 hidden md:flex items-center gap-2 select-none">
+      {/* vertical label */}
+      <span
+        className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300"
+        style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+      >
+        🚦 светофор подготовки
+      </span>
+
       <div className="flex flex-col items-center">
         {steps.map((step, i) => {
           const isDone    = done[i]
@@ -74,3 +82,4 @@ export default function ProgressNav({ laptopChecked, flowDone, selectedSession, 
     </div>
   )
 }
+
