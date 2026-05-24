@@ -60,6 +60,22 @@ function googleCalLink(session) {
   return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${start}/${end}&location=${loc}&details=${encodeURIComponent('Вайб-кодинг практикум. Адрес придёт после оплаты.')}`
 }
 
+// Конвертирует File в { base64, mime, ext }
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result            // "data:image/jpeg;base64,/9j/..."
+      const base64 = result.split(',')[1]
+      const mime   = file.type               // "image/jpeg"
+      const ext    = file.name.split('.').pop().toLowerCase()
+      resolve({ base64, mime, ext })
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 export default function RegistrationForm({ canRegister, selectedSession, onBlockedClick, onSeatsUpdate }) {
   const [form, setForm]         = useState({ name: '', phone: '', email: '' })
   const [step, setStep]         = useState('form')   // 'form' | 'payment' | 'confirmed'
@@ -68,6 +84,8 @@ export default function RegistrationForm({ canRegister, selectedSession, onBlock
   const [copied, setCopied]     = useState(false)
   const [error, setError]       = useState(null)
   const [touched, setTouched]   = useState(false)
+  const [receipt, setReceipt]   = useState(null)     // File объект
+  const [receiptPreview, setReceiptPreview] = useState(null) // URL превью
 
   const session   = sessions.find(s => s.id === selectedSession)
   const formValid = form.name.trim() && form.phone.trim() && form.email.trim()
@@ -100,12 +118,28 @@ export default function RegistrationForm({ canRegister, selectedSession, onBlock
   const handlePayConfirm = async () => {
     setPayLoading(true)
     try {
+      let receiptData = {}
+      if (receipt) {
+        receiptData = await fileToBase64(receipt)
+      }
       if (SCRIPT_URL) {
-        await post({ action: 'confirmPayment', email: form.email, sessionId: session?.id })
+        await post({
+          action: 'confirmPayment',
+          email: form.email,
+          sessionId: session?.id,
+          ...receiptData, // receiptBase64, mime, ext
+        })
       }
       setStep('confirmed')
     } catch { /* тихо */ }
     finally { setPayLoading(false) }
+  }
+
+  const handleReceiptChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setReceipt(file)
+    setReceiptPreview(URL.createObjectURL(file))
   }
 
   const copyPhone = () => {
@@ -160,6 +194,26 @@ export default function RegistrationForm({ canRegister, selectedSession, onBlock
                 В комментарии к переводу укажи: <span className="text-white/60 font-medium">{session.city} · {formatDate(session.date)}</span>
               </p>
             )}
+          </div>
+
+          {/* прикрепить чек */}
+          <div className="mb-6">
+            <p className="text-white/50 text-sm mb-3">Прикрепи скриншот чека об оплате:</p>
+            <label className="block cursor-pointer">
+              {receiptPreview ? (
+                <div className="relative">
+                  <img src={receiptPreview} alt="Чек" className="w-full max-h-48 object-contain rounded-xl border border-white/20 mb-2" />
+                  <div className="text-white/40 text-xs text-center">Нажми чтобы заменить</div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-white/20 hover:border-[#D97757] rounded-xl p-8 text-center transition-colors">
+                  <div className="text-3xl mb-2">📎</div>
+                  <p className="text-white/50 text-sm">Нажми чтобы прикрепить скриншот</p>
+                  <p className="text-white/30 text-xs mt-1">JPG, PNG до 5 МБ</p>
+                </div>
+              )}
+              <input type="file" accept="image/*" onChange={handleReceiptChange} className="hidden" />
+            </label>
           </div>
 
           {/* кнопка подтверждения */}
