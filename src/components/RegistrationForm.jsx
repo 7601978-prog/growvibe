@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { sessions } from '../data/sessions'
 
-const SCRIPT_URL = import.meta.env.VITE_SHEETS_SCRIPT_URL || ''
+const SCRIPT_URL   = import.meta.env.VITE_SHEETS_SCRIPT_URL  || ''
+const KASPI_PHONE  = import.meta.env.VITE_KASPI_PHONE        || '+7 (777) 000-00-00'
+const KASPI_AMOUNT = import.meta.env.VITE_KASPI_AMOUNT       || '50 000'
 
 const formatDate = (dateStr) => {
   const d = new Date(dateStr)
@@ -59,89 +61,165 @@ function googleCalLink(session) {
 }
 
 export default function RegistrationForm({ canRegister, selectedSession, onBlockedClick, onSeatsUpdate }) {
-  const [form, setForm]       = useState({ name: '', phone: '', email: '' })
-  const [submitted, setSubmitted] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState(null)
-  const [touched, setTouched] = useState(false)
+  const [form, setForm]         = useState({ name: '', phone: '', email: '' })
+  const [step, setStep]         = useState('form')   // 'form' | 'payment' | 'confirmed'
+  const [loading, setLoading]   = useState(false)
+  const [payLoading, setPayLoading] = useState(false)
+  const [copied, setCopied]     = useState(false)
+  const [error, setError]       = useState(null)
+  const [touched, setTouched]   = useState(false)
 
   const session   = sessions.find(s => s.id === selectedSession)
   const formValid = form.name.trim() && form.phone.trim() && form.email.trim()
 
+  const post = (body) => fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+
+  // ── Шаг 1: отправить заявку ──────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!canRegister) { onBlockedClick?.(); return }
     setTouched(true)
     if (!formValid) return
-
-    setLoading(true)
-    setError(null)
-
+    setLoading(true); setError(null)
     try {
       if (SCRIPT_URL) {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors', // Apps Script requires no-cors
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name:        form.name,
-            phone:       form.phone,
-            email:       form.email,
-            sessionId:   session?.id,
-            city:        session?.city,
-            sessionDate: session?.date,
-          }),
-        })
-        // После успешной отправки — уведомить родителя об уменьшении мест
+        await post({ action: 'register', name: form.name, phone: form.phone,
+          email: form.email, sessionId: session?.id, city: session?.city, sessionDate: session?.date })
         onSeatsUpdate?.(session?.id)
       }
-      setSubmitted(true)
-    } catch {
-      setError('Ошибка отправки. Попробуйте ещё раз.')
-    } finally {
-      setLoading(false)
-    }
+      setStep('payment')
+    } catch { setError('Ошибка отправки. Попробуйте ещё раз.') }
+    finally { setLoading(false) }
   }
 
-  // ── Экран успеха ─────────────────────────────────────────────────────────
-  if (submitted) {
+  // ── Шаг 2: подтвердить оплату ────────────────────────────────────────────
+  const handlePayConfirm = async () => {
+    setPayLoading(true)
+    try {
+      if (SCRIPT_URL) {
+        await post({ action: 'confirmPayment', email: form.email, sessionId: session?.id })
+      }
+      setStep('confirmed')
+    } catch { /* тихо */ }
+    finally { setPayLoading(false) }
+  }
+
+  const copyPhone = () => {
+    navigator.clipboard.writeText(KASPI_PHONE.replace(/\D/g, ''))
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+
+  // ── Экран: оплата Kaspi ───────────────────────────────────────────────────
+  if (step === 'payment') {
     return (
       <section id="register" className="py-20 bg-[#0f0f0f]">
-        <div className="max-w-2xl mx-auto px-6 text-center text-white">
-          <div className="text-6xl mb-6">🎉</div>
-          <h2 className="text-3xl font-bold mb-3">Заявка принята!</h2>
-          <p className="text-white/60 mb-10">
-            Мы свяжемся с тобой в ближайшее время для подтверждения и оплаты.
+        <div className="max-w-lg mx-auto px-6 text-white">
+          {/* прогресс */}
+          <div className="flex items-center gap-3 mb-10">
+            <div className="flex items-center gap-2 text-green-400 text-sm font-medium">
+              <span className="w-6 h-6 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-bold">✓</span>
+              Заявка
+            </div>
+            <div className="flex-1 h-px bg-white/20" />
+            <div className="flex items-center gap-2 text-[#D97757] text-sm font-medium">
+              <span className="w-6 h-6 rounded-full bg-[#D97757] text-white text-xs flex items-center justify-center font-bold">2</span>
+              Оплата
+            </div>
+            <div className="flex-1 h-px bg-white/20" />
+            <div className="flex items-center gap-2 text-white/30 text-sm">
+              <span className="w-6 h-6 rounded-full bg-white/10 text-white/30 text-xs flex items-center justify-center font-bold">3</span>
+              Готово
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-bold mb-2">Оплати через Kaspi</h2>
+          <p className="text-white/50 text-sm mb-8">Переведи на номер ниже — место бронируется после оплаты.</p>
+
+          {/* сумма + номер */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-6">
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Сумма</p>
+            <p className="text-3xl font-bold text-[#D97757] mb-5">{KASPI_AMOUNT} ₸</p>
+
+            <p className="text-white/40 text-xs uppercase tracking-widest mb-1">Номер Kaspi</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xl font-mono font-bold">{KASPI_PHONE}</p>
+              <button
+                onClick={copyPhone}
+                className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {copied ? '✓ Скопировано' : 'Копировать'}
+              </button>
+            </div>
+
+            {session && (
+              <p className="text-white/30 text-xs mt-4 border-t border-white/10 pt-4">
+                В комментарии к переводу укажи: <span className="text-white/60 font-medium">{session.city} · {formatDate(session.date)}</span>
+              </p>
+            )}
+          </div>
+
+          {/* кнопка подтверждения */}
+          <button
+            onClick={handlePayConfirm}
+            disabled={payLoading}
+            className="w-full bg-[#D97757] hover:bg-[#c4674a] disabled:opacity-60 text-white font-bold py-4 rounded-xl text-base transition-colors mb-3"
+          >
+            {payLoading ? '⏳ Отправляем...' : '✅ Я оплатил — подтвердить место'}
+          </button>
+          <p className="text-white/30 text-xs text-center">
+            После нажатия организатор получит уведомление и проверит оплату в Kaspi
+          </p>
+        </div>
+      </section>
+    )
+  }
+
+  // ── Экран: всё готово ─────────────────────────────────────────────────────
+  if (step === 'confirmed') {
+    return (
+      <section id="register" className="py-20 bg-[#0f0f0f]">
+        <div className="max-w-lg mx-auto px-6 text-white">
+          {/* прогресс */}
+          <div className="flex items-center gap-3 mb-10">
+            {['Заявка','Оплата','Готово'].map((s, i) => (
+              <>
+                <div key={s} className="flex items-center gap-2 text-green-400 text-sm font-medium">
+                  <span className="w-6 h-6 rounded-full bg-green-500 text-white text-xs flex items-center justify-center font-bold">✓</span>
+                  {s}
+                </div>
+                {i < 2 && <div className="flex-1 h-px bg-green-500/40" />}
+              </>
+            ))}
+          </div>
+
+          <div className="text-5xl mb-4 text-center">🎉</div>
+          <h2 className="text-2xl font-bold mb-2 text-center">Место забронировано!</h2>
+          <p className="text-white/50 text-sm text-center mb-8">
+            Организатор проверит оплату в Kaspi и подтвердит в течение часа.
           </p>
 
           {session && (
-            <div className="bg-white/10 border border-white/20 rounded-2xl p-5 mb-8 text-left">
-              <p className="text-white/50 text-xs uppercase tracking-widest mb-2">Твоё занятие</p>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5 mb-8">
+              <p className="text-white/40 text-xs uppercase tracking-widest mb-2">Твоё занятие</p>
               <p className="text-white font-bold text-lg">{session.city} · {formatDate(session.date)}</p>
-              <p className="text-white/60 text-sm mt-1">{session.time}</p>
+              <p className="text-white/50 text-sm mt-1">{session.time}</p>
             </div>
           )}
 
-          <p className="text-white/50 text-sm mb-5">Добавь в календарь, чтобы не забыть:</p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href={session ? googleCalLink(session) : '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 bg-white text-gray-900 font-semibold px-6 py-3.5 rounded-xl text-sm hover:bg-white/90 transition-colors"
-            >
-              <span className="text-lg">📅</span>
-              Google Calendar
+          <p className="text-white/40 text-sm text-center mb-4">Добавь в календарь, чтобы не забыть:</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <a href={session ? googleCalLink(session) : '#'} target="_blank" rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 bg-white text-gray-900 font-semibold px-4 py-3 rounded-xl text-sm hover:bg-white/90 transition-colors">
+              📅 Google Calendar
             </a>
-
             {session && (
-              <button
-                onClick={() => downloadICS(session)}
-                className="flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white font-semibold px-6 py-3.5 rounded-xl text-sm hover:bg-white/20 transition-colors"
-              >
-                <span className="text-lg">📲</span>
-                Apple / Outlook (.ics)
+              <button onClick={() => downloadICS(session)}
+                className="flex-1 flex items-center justify-center gap-2 bg-white/10 border border-white/20 text-white font-semibold px-4 py-3 rounded-xl text-sm hover:bg-white/20 transition-colors">
+                📲 Apple / Outlook
               </button>
             )}
           </div>
