@@ -414,6 +414,69 @@ function StepCard({ step, index, checked, onCheck, token, onToken, isOpen, onOpe
   )
 }
 
+// ── character sidebar ───────────────────────────────────────────────────────
+
+function CharacterSidebar({ steps, completedCount }) {
+  if (!steps.length) return null
+  const done = completedCount >= steps.length
+  const pct  = steps.length > 1
+    ? Math.min((completedCount / (steps.length - 1)) * 100, 100)
+    : completedCount > 0 ? 100 : 0
+
+  return (
+    <div className="sticky top-8 flex flex-col items-center" style={{ height: 520 }}>
+      <span className="text-xs font-semibold text-gray-400 mb-3 tabular-nums">
+        {completedCount}/{steps.length}
+      </span>
+
+      <div className="relative flex-1 w-full flex flex-col items-center">
+        {/* track background */}
+        <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-gray-200 rounded-full" />
+
+        {/* filled track */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 bg-[#D97757] rounded-full transition-all duration-700 ease-in-out"
+          style={{ height: `${pct}%` }}
+        />
+
+        {/* step dots */}
+        {steps.map((step, i) => {
+          const topPct = steps.length > 1 ? (i / (steps.length - 1)) * 100 : 50
+          const isDone    = i < completedCount
+          const isCurrent = i === completedCount
+          return (
+            <div
+              key={step.id}
+              className={`absolute left-1/2 rounded-full border-2 transition-all duration-500 ${
+                isDone
+                  ? 'w-3 h-3 bg-[#D97757] border-[#D97757]'
+                  : isCurrent
+                    ? 'w-4 h-4 bg-white border-[#D97757] shadow-[0_0_0_4px_rgba(217,119,87,0.18)]'
+                    : 'w-2.5 h-2.5 bg-white border-gray-300'
+              }`}
+              style={{ top: `${topPct}%`, transform: 'translate(-50%, -50%)' }}
+            />
+          )
+        })}
+
+        {/* character */}
+        <div
+          className={`absolute left-1/2 text-2xl z-10 transition-all duration-700 ease-in-out ${
+            done ? 'animate-celebrate' : 'animate-walk'
+          }`}
+          style={{ top: `${pct}%` }}
+        >
+          {done ? '🎉' : '🧑‍💻'}
+        </div>
+      </div>
+
+      {done && (
+        <span className="text-xs font-semibold text-green-600 mt-3">Готово!</span>
+      )}
+    </div>
+  )
+}
+
 // ── main component ──────────────────────────────────────────────────────────
 
 export default function PrepFlow({ laptopChecked, onFlowComplete, flash }) {
@@ -452,7 +515,7 @@ export default function PrepFlow({ laptopChecked, onFlowComplete, flash }) {
       id="prep"
       className={`py-20 bg-white transition-all ${flash ? 'animate-shake outline outline-2 outline-[#D97757] rounded-2xl' : ''}`}
     >
-      <div className="max-w-3xl mx-auto px-6">
+      <div className="max-w-5xl mx-auto px-6">
         <p className="text-[#D97757] font-semibold text-sm uppercase tracking-widest mb-3">Обязательно</p>
         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
           Перед регистрацией пройдите {laptop ? steps.length : 7} обязательных шагов
@@ -514,27 +577,34 @@ export default function PrepFlow({ laptopChecked, onFlowComplete, flash }) {
               />
             </div>
 
-            <div className="space-y-3">
-              {steps.map((step, i) => {
-                const stepDone = step.checks.every((_, ci) => checked[`${step.id}_${ci}`])
-                const locked = i > activeStep
-                return (
-                  <StepCard
-                    key={step.id}
-                    step={step}
-                    index={i}
-                    checked={checked}
-                    onCheck={handleCheck}
-                    token={token}
-                    onToken={setToken}
-                    isOpen={openStep === i}
-                    onOpen={() => !locked && setOpenStep(openStep === i ? null : i)}
-                    isLocked={locked}
-                    isLast={i === steps.length - 1}
-                    onNext={() => goNext(i)}
-                  />
-                )
-              })}
+            <div className="flex gap-6">
+              {/* step cards */}
+              <div className="flex-1 space-y-3 min-w-0">
+                {steps.map((step, i) => {
+                  const locked = i > activeStep
+                  return (
+                    <StepCard
+                      key={step.id}
+                      step={step}
+                      index={i}
+                      checked={checked}
+                      onCheck={handleCheck}
+                      token={token}
+                      onToken={setToken}
+                      isOpen={openStep === i}
+                      onOpen={() => !locked && setOpenStep(openStep === i ? null : i)}
+                      isLocked={locked}
+                      isLast={i === steps.length - 1}
+                      onNext={() => goNext(i)}
+                    />
+                  )
+                })}
+              </div>
+
+              {/* character sidebar — desktop only */}
+              <div className="hidden md:block w-14 flex-shrink-0">
+                <CharacterSidebar steps={steps} completedCount={completedCount} />
+              </div>
             </div>
           </>
         )}
