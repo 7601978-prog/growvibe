@@ -423,13 +423,7 @@ export default function PrepFlow({ laptopChecked, onFlowComplete, flash }) {
           Скачать полную инструкцию со скриншотами (.docx)
         </a>
 
-        {!laptopChecked && (
-          <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 text-sm text-amber-800 mb-8">
-            ⚠️ Сначала подтвердите в блоке выше, что ваш ноутбук соответствует требованиям.
-          </div>
-        )}
-
-        {laptopChecked && !laptop && (
+        {!laptop && (
           <div className="mb-8">
             <p className="font-semibold text-gray-900 mb-4">Выберите тип ноутбука:</p>
             <div className="grid grid-cols-2 gap-4">
