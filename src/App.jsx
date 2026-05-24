@@ -85,6 +85,7 @@ export default function App() {
           laptopChecked={laptopChecked}
           setLaptopChecked={setLaptopChecked}
           flash={flashReq}
+          onNext={() => prepRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
         />
       </div>
 

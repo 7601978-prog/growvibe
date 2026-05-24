@@ -17,7 +17,7 @@ const win = [
   'Права администратора',
 ]
 
-export default function Requirements({ laptopChecked, setLaptopChecked, flash }) {
+export default function Requirements({ laptopChecked, setLaptopChecked, flash, onNext }) {
   return (
     <section className={`py-20 bg-gray-50 transition-all ${flash ? 'animate-shake animate-glow outline outline-2 outline-[#D97757] rounded-2xl' : ''}`}>
       <div className="max-w-4xl mx-auto px-6">
@@ -52,11 +52,13 @@ export default function Requirements({ laptopChecked, setLaptopChecked, flash })
           </div>
         </div>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 mb-6">
-          ⚠️ Если у вас корпоративный ноутбук — проверьте заранее, что можно установить Git, Claude и другие программы.
+        {/* corporate laptop ban */}
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800 mb-6 flex items-start gap-3">
+          <span className="text-lg flex-shrink-0">🚫</span>
+          <span><strong>Корпоративные ноутбуки не допускаются.</strong> На них часто заблокирована установка программ — это сорвёт твою работу на практикуме. Приходи с личным устройством.</span>
         </div>
 
-        <label className={`flex items-start gap-3 cursor-pointer bg-white border rounded-xl p-4 hover:border-[#D97757] transition-colors ${flash ? 'border-[#D97757] shadow-[0_0_0_3px_rgba(217,119,87,0.2)]' : 'border-gray-200'}`}>
+        <label className={`flex items-start gap-3 cursor-pointer bg-white border rounded-xl p-4 hover:border-[#D97757] transition-colors mb-4 ${flash ? 'border-[#D97757] shadow-[0_0_0_3px_rgba(217,119,87,0.2)]' : 'border-gray-200'}`}>
           <input
             type="checkbox"
             checked={laptopChecked}
@@ -67,6 +69,18 @@ export default function Requirements({ laptopChecked, setLaptopChecked, flash })
             Я проверил/проверила, что мой ноутбук подходит для участия
           </span>
         </label>
+
+        <button
+          onClick={laptopChecked ? onNext : undefined}
+          disabled={!laptopChecked}
+          className={`w-full py-4 rounded-xl font-semibold text-sm transition-all ${
+            laptopChecked
+              ? 'bg-[#D97757] hover:bg-[#c4674a] text-white'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {laptopChecked ? 'Далее — пройти подготовку →' : 'Подтвердите, что ноутбук подходит'}
+        </button>
       </div>
     </section>
   )
