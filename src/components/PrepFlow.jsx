@@ -276,32 +276,45 @@ function InstructionList({ items }) {
   )
 }
 
-function StepCard({ step, index, checked, onCheck, token, onToken, isOpen, onOpen }) {
+function StepCard({ step, index, checked, onCheck, token, onToken, isOpen, onOpen, isLocked, isLast, onNext }) {
   const allChecked = step.checks.every((_, i) => checked[`${step.id}_${i}`])
 
   return (
     <div className={`border rounded-2xl overflow-hidden transition-all ${
       allChecked
         ? 'border-green-300 bg-green-50'
-        : isOpen
-          ? 'border-[#D97757] shadow-sm'
-          : 'border-gray-200 bg-white'
+        : isLocked
+          ? 'border-gray-100 bg-gray-50 opacity-60'
+          : isOpen
+            ? 'border-[#D97757] shadow-sm'
+            : 'border-gray-200 bg-white'
     }`}>
+      {/* header */}
       <button
-        className="w-full flex items-center justify-between px-6 py-4 text-left"
-        onClick={onOpen}
+        className={`w-full flex items-center justify-between px-6 py-4 text-left ${isLocked ? 'cursor-not-allowed' : ''}`}
+        onClick={isLocked ? undefined : onOpen}
+        disabled={isLocked}
       >
         <div className="flex items-center gap-4">
           <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-colors ${
-            allChecked ? 'bg-green-500 text-white' : isOpen ? 'bg-[#D97757] text-white' : 'bg-gray-100 text-gray-500'
+            allChecked ? 'bg-green-500 text-white'
+            : isLocked ? 'bg-gray-200 text-gray-400'
+            : isOpen ? 'bg-[#D97757] text-white'
+            : 'bg-gray-100 text-gray-500'
           }`}>
-            {allChecked ? '✓' : index + 1}
+            {allChecked ? '✓' : isLocked ? '🔒' : index + 1}
           </span>
-          <span className={`font-semibold ${allChecked ? 'text-green-700' : 'text-gray-900'}`}>
+          <span className={`font-semibold ${
+            allChecked ? 'text-green-700'
+            : isLocked ? 'text-gray-400'
+            : 'text-gray-900'
+          }`}>
             {step.title}
           </span>
         </div>
-        <span className="text-gray-400 text-lg ml-4 flex-shrink-0">{isOpen ? '↑' : '↓'}</span>
+        {!isLocked && (
+          <span className="text-gray-400 text-lg ml-4 flex-shrink-0">{isOpen ? '↑' : '↓'}</span>
+        )}
       </button>
 
       {isOpen && (
@@ -371,6 +384,30 @@ function StepCard({ step, index, checked, onCheck, token, onToken, isOpen, onOpe
               </label>
             ))}
           </div>
+
+          {/* next button */}
+          <div className="mt-5">
+            {isLast ? (
+              allChecked && (
+                <div className="bg-green-50 border border-green-300 rounded-xl p-4 text-center">
+                  <p className="font-bold text-green-800">🎉 Все шаги выполнены!</p>
+                  <p className="text-green-700 text-sm mt-1">Выберите город и дату занятия ↓</p>
+                </div>
+              )
+            ) : (
+              <button
+                onClick={allChecked ? onNext : undefined}
+                disabled={!allChecked}
+                className={`w-full py-3.5 rounded-xl font-semibold text-sm transition-all ${
+                  allChecked
+                    ? 'bg-[#D97757] hover:bg-[#c4674a] text-white'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {allChecked ? 'Далее →' : 'Отметьте выполненные пункты, чтобы продолжить'}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -398,6 +435,17 @@ export default function PrepFlow({ laptopChecked, onFlowComplete, flash }) {
   const completedCount = steps.filter(s =>
     s.checks.every((_, i) => checked[`${s.id}_${i}`])
   ).length
+
+  // first step that isn't completed yet = the "current" step
+  const currentStep = steps.findIndex(s =>
+    !s.checks.every((_, i) => checked[`${s.id}_${i}`])
+  )
+  // if all done, currentStep === -1 → allow any toggle (review mode)
+  const activeStep = currentStep === -1 ? steps.length : currentStep
+
+  const goNext = (i) => {
+    if (i + 1 < steps.length) setOpenStep(i + 1)
+  }
 
   return (
     <section
@@ -467,28 +515,27 @@ export default function PrepFlow({ laptopChecked, onFlowComplete, flash }) {
             </div>
 
             <div className="space-y-3">
-              {steps.map((step, i) => (
-                <StepCard
-                  key={step.id}
-                  step={step}
-                  index={i}
-                  checked={checked}
-                  onCheck={handleCheck}
-                  token={token}
-                  onToken={setToken}
-                  isOpen={openStep === i}
-                  onOpen={() => setOpenStep(openStep === i ? null : i)}
-                />
-              ))}
+              {steps.map((step, i) => {
+                const stepDone = step.checks.every((_, ci) => checked[`${step.id}_${ci}`])
+                const locked = i > activeStep
+                return (
+                  <StepCard
+                    key={step.id}
+                    step={step}
+                    index={i}
+                    checked={checked}
+                    onCheck={handleCheck}
+                    token={token}
+                    onToken={setToken}
+                    isOpen={openStep === i}
+                    onOpen={() => !locked && setOpenStep(openStep === i ? null : i)}
+                    isLocked={locked}
+                    isLast={i === steps.length - 1}
+                    onNext={() => goNext(i)}
+                  />
+                )
+              })}
             </div>
-
-            {completedCount === steps.length && (
-              <div className="mt-8 bg-green-50 border border-green-300 rounded-2xl p-6 text-center">
-                <div className="text-4xl mb-3">🎉</div>
-                <p className="font-bold text-green-800 text-xl mb-1">Отлично! Все шаги выполнены.</p>
-                <p className="text-green-700 text-sm">Выберите город и дату занятия ↓</p>
-              </div>
-            )}
           </>
         )}
       </div>
