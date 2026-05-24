@@ -12,7 +12,7 @@ const formatDate = (dateStr) => {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
 }
 
-export default function Schedule({ selectedCity, setSelectedCity, selectedSession, setSelectedSession, flowDone, flash }) {
+export default function Schedule({ selectedCity, setSelectedCity, selectedSession, setSelectedSession, flowDone, flash, liveSeats = {} }) {
   return (
     <section id="schedule" className={`py-20 bg-gray-50 transition-all ${flash ? 'animate-shake outline outline-2 outline-[#D97757] rounded-2xl' : ''}`}>
       <div className="max-w-4xl mx-auto px-6">
@@ -40,34 +40,40 @@ export default function Schedule({ selectedCity, setSelectedCity, selectedSessio
           <p className="text-gray-400 text-sm">Сначала выберите город, чтобы увидеть доступные даты.</p>
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
-            {sessions.filter(s => s.city === selectedCity).map(s => (
-              <div
-                key={s.id}
-                onClick={() => flowDone && setSelectedSession(s.id === selectedSession ? null : s.id)}
-                className={`bg-white rounded-2xl p-6 border-2 transition-all ${
-                  !flowDone ? 'opacity-50 cursor-not-allowed border-gray-200' :
-                  selectedSession === s.id ? 'border-[#D97757]' : 'border-gray-200 hover:border-[#D97757] cursor-pointer'
-                }`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="font-bold text-gray-900 text-lg">{s.day}, {formatDate(s.date)}</p>
-                    <p className="text-gray-500 text-sm">{s.time} · {s.duration}</p>
+            {sessions.filter(s => s.city === selectedCity).map(s => {
+              // Берём живые данные если есть, иначе из sessions.js
+              const live = liveSeats[s.id]
+              const seatsLeft = live ? live.seatsLeft : s.seatsLeft
+              const status    = live ? live.status    : s.status
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => flowDone && status !== 'Набор закрыт' && setSelectedSession(s.id === selectedSession ? null : s.id)}
+                  className={`bg-white rounded-2xl p-6 border-2 transition-all ${
+                    !flowDone || status === 'Набор закрыт' ? 'opacity-50 cursor-not-allowed border-gray-200' :
+                    selectedSession === s.id ? 'border-[#D97757]' : 'border-gray-200 hover:border-[#D97757] cursor-pointer'
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <p className="font-bold text-gray-900 text-lg">{s.day}, {formatDate(s.date)}</p>
+                      <p className="text-gray-500 text-sm">{s.time} · {s.duration}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColor[status] || statusColor['Есть места']}`}>
+                      {status}
+                    </span>
                   </div>
-                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${statusColor[s.status]}`}>
-                    {s.status}
-                  </span>
+                  <div className="text-gray-400 text-sm mb-1">📍 {s.location}</div>
+                  <div className="text-gray-400 text-sm mb-4">👥 Осталось мест: {seatsLeft} из {s.seatsTotal}</div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900">{s.price}</span>
+                    {selectedSession === s.id && (
+                      <span className="text-[#D97757] text-sm font-semibold">✓ Выбрано</span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-gray-400 text-sm mb-1">📍 {s.location}</div>
-                <div className="text-gray-400 text-sm mb-4">👥 Осталось мест: {s.seatsLeft} из {s.seatsTotal}</div>
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-900">{s.price}</span>
-                  {selectedSession === s.id && (
-                    <span className="text-[#D97757] text-sm font-semibold">✓ Выбрано</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

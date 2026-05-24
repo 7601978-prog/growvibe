@@ -1,4 +1,5 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { sessions as initialSessions } from './data/sessions'
 import Hero from './components/Hero'
 import WhatIs from './components/WhatIs'
 import ForWhom from './components/ForWhom'
@@ -14,8 +15,11 @@ import FinalCTA from './components/FinalCTA'
 import Toast from './components/Toast'
 import ProgressNav from './components/ProgressNav'
 
+const SCRIPT_URL = import.meta.env.VITE_SHEETS_SCRIPT_URL || ''
+
 export default function App() {
   const [laptopChecked, setLaptopChecked] = useState(false)
+  const [liveSeats, setLiveSeats] = useState({}) // { sessionId: { seatsLeft, status } }
   const [flowDone, setFlowDone]           = useState(false)
   const [selectedCity, setSelectedCity]   = useState(null)
   const [selectedSession, setSelectedSession] = useState(null)
@@ -36,6 +40,31 @@ export default function App() {
   const scheduleRef = useRef(null)
   const readinessRef= useRef(null)
   const registerRef = useRef(null)
+
+  // Загружаем живые остатки мест из Google Sheets при старте
+  useEffect(() => {
+    if (!SCRIPT_URL) return
+    fetch(SCRIPT_URL)
+      .then(r => r.json())
+      .then(data => setLiveSeats(data))
+      .catch(() => {}) // тихо падаем — покажем дефолты из sessions.js
+  }, [])
+
+  // Обновляем счётчик локально сразу после заявки
+  const handleSeatsUpdate = (sessionId) => {
+    setLiveSeats(prev => {
+      const curr = prev[sessionId]
+      if (!curr) return prev
+      const newLeft = Math.max(0, (curr.seatsLeft ?? 0) - 1)
+      return {
+        ...prev,
+        [sessionId]: {
+          seatsLeft: newLeft,
+          status: newLeft === 0 ? 'Набор закрыт' : newLeft <= 2 ? 'Почти заполнено' : 'Есть места',
+        },
+      }
+    })
+  }
 
   const readinessDone = readiness.every(Boolean) && conditions.every(Boolean)
   const canRegister   = flowDone && selectedSession && readinessDone
@@ -114,6 +143,7 @@ export default function App() {
           setSelectedSession={setSelectedSession}
           flowDone={flowDone}
           flash={flashSchedule}
+          liveSeats={liveSeats}
         />
       </div>
 
@@ -130,6 +160,7 @@ export default function App() {
           canRegister={canRegister}
           selectedSession={selectedSession}
           onBlockedClick={handleCTA}
+          onSeatsUpdate={handleSeatsUpdate}
         />
       </div>
 
