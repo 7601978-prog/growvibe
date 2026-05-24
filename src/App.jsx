@@ -12,6 +12,7 @@ import RegistrationForm from './components/RegistrationForm'
 import FAQ from './components/FAQ'
 import FinalCTA from './components/FinalCTA'
 import Toast from './components/Toast'
+import ProgressNav from './components/ProgressNav'
 
 export default function App() {
   const [laptopChecked, setLaptopChecked] = useState(false)
@@ -73,6 +74,14 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white">
       {toast && <Toast message={toast} onDone={() => setToast(null)} />}
+
+      <ProgressNav
+        laptopChecked={laptopChecked}
+        flowDone={flowDone}
+        selectedSession={selectedSession}
+        readinessDone={readinessDone}
+        refs={{ req: reqRef, prep: prepRef, schedule: scheduleRef, readiness: readinessRef, register: registerRef }}
+      />
 
       <Hero onCTA={handleCTA} onSchedule={scrollToSchedule} />
       <WhatIs />
