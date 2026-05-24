@@ -12,7 +12,7 @@ export default function FinalCTA({ onCTA }) {
           onClick={onCTA}
           className="bg-white text-[#D97757] font-bold px-10 py-4 rounded-xl text-base hover:bg-white/90 transition-colors"
         >
-          Пройти флоу и записаться →
+          Пройти подготовку и записаться →
         </button>
       </div>
     </section>

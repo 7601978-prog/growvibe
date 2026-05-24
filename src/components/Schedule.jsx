@@ -73,7 +73,7 @@ export default function Schedule({ selectedCity, setSelectedCity, selectedSessio
 
         {!flowDone && selectedCity && (
           <p className="text-amber-600 text-sm mt-4">
-            ⚠️ Сначала пройдите подготовительный флоу, чтобы выбрать дату.
+            ⚠️ Сначала пройдите подготовку выше, чтобы выбрать дату.
           </p>
         )}
       </div>

@@ -32,7 +32,7 @@ export default function Price({ onCTA }) {
           onClick={onCTA}
           className="bg-[#D97757] hover:bg-[#c4674a] text-white font-semibold px-10 py-4 rounded-xl text-base transition-colors"
         >
-          Пройти флоу и записаться →
+          Пройти подготовку и записаться →
         </button>
       </div>
     </section>

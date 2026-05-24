@@ -43,7 +43,7 @@ export default function RegistrationForm({ canRegister, selectedSession, onBlock
 
         {!canRegister && (
           <div className="bg-white/10 border border-white/20 rounded-xl p-4 mb-8 text-white/60 text-sm">
-            ⚠️ Для подачи заявки нужно пройти подготовительный флоу, выбрать дату и подтвердить готовность.
+            ⚠️ Для подачи заявки нужно пройти подготовку, выбрать дату и подтвердить готовность.
           </div>
         )}
 

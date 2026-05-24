@@ -36,7 +36,7 @@ export default function Hero({ onCTA, onSchedule }) {
             onClick={onCTA}
             className="bg-[#D97757] hover:bg-[#c4674a] text-white font-semibold px-8 py-4 rounded-xl text-base transition-colors"
           >
-            Пройти флоу и записаться →
+            Пройти подготовку и записаться →
           </button>
           <button
             onClick={onSchedule}
