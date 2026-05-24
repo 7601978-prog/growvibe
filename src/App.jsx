@@ -41,13 +41,18 @@ export default function App() {
   const readinessRef= useRef(null)
   const registerRef = useRef(null)
 
-  // Загружаем живые остатки мест из Google Sheets при старте
+  // Загружаем живые остатки мест из Google Sheets + обновляем каждые 60 сек
   useEffect(() => {
     if (!SCRIPT_URL) return
-    fetch(SCRIPT_URL)
-      .then(r => r.json())
-      .then(data => setLiveSeats(data))
-      .catch(() => {}) // тихо падаем — покажем дефолты из sessions.js
+    const fetchSeats = () =>
+      fetch(SCRIPT_URL)
+        .then(r => r.json())
+        .then(data => setLiveSeats(data))
+        .catch(() => {})
+
+    fetchSeats()
+    const interval = setInterval(fetchSeats, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   // Обновляем счётчик локально сразу после заявки
